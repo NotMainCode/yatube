@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block head_title %}
+  Последние обновления на сайте
+{% endblock %}
+{% block title %}
+  Последние обновления на сайте
+{% endblock %}
+{% block content %}
+  {% load cache %}
+  {% cache 20 index_page page_obj.number request.user.username %}
+    {% include 'posts/includes/switcher.html' %}
+    {% for post in page_obj %}
+      {% include 'includes/post_card.html' %}
+      {% if post.group %}
+        <a
+          href="{% url 'posts:group_list' post.group.slug %}"
+        >все записи группы: {{ post.group.title }}
+        </a>
+      {% endif %}
+      {% if not forloop.last %}<hr>{% endif %}
+    {% endfor %}
+  {% endcache %}
+  {% include 'posts/includes/paginator.html' %}
+{% endblock %}
