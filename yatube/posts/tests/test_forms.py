@@ -40,8 +40,8 @@ class PostFormTests(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
     def setUp(self):
         self.authorized_client = Client()
@@ -93,6 +93,7 @@ class PostFormTests(TestCase):
         for value, expected in value_expected.items():
             with self.subTest():
                 self.assertEqual(value, expected)
+        self.assertTrue(new_post.image)
 
     def test_create_post_reject_authorized_user(self):
         """Invalid form do not creates a post entry (authorized user)."""
@@ -192,7 +193,7 @@ class PostFormTests(TestCase):
             response.status_code: HTTPStatus.OK,
             Post.objects.count(): new_posts_count,
             editable_post.text: PostFormTests.post.text,
-            editable_post.group.id: PostFormTests.post.group.id,
+            editable_post.group: PostFormTests.post.group,
         }
         for current, expected in current_expected.items():
             self.assertEqual(current, expected)
@@ -242,7 +243,7 @@ class PostFormTests(TestCase):
         current_expected = {
             response.status_code: HTTPStatus.OK,
             comments.count(): new_comments_count,
-            str(comments.first()): form_data["text"][: settings.NUM_CHAR],
+            comments.last().text: form_data["text"],
         }
         for current, expected in current_expected.items():
             with self.subTest():

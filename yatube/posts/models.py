@@ -22,7 +22,7 @@ class Post(models.Model):
     """Table settings for user posts."""
 
     text = models.TextField()
-    pub_date = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -44,7 +44,7 @@ class Post(models.Model):
         return self.text[: settings.NUM_CHAR]
 
     class Meta:
-        ordering = ["-pub_date", "text"]
+        ordering = ["-pub_date"]
 
 
 class Comment(models.Model):
@@ -80,3 +80,10 @@ class Follow(models.Model):
         on_delete=models.CASCADE,
         related_name="following",
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "author"], name="unique_follow"
+            ),
+        ]

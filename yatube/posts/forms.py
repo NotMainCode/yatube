@@ -30,4 +30,9 @@ class CommentForm(forms.ModelForm):
         fields = ("text",)
 
     def clean_text(self):
-        return self.cleaned_data["text"]
+        data = self.cleaned_data["text"]
+        if not data:
+            raise forms.ValidationError(
+                "Заполните поле для текста комментария"
+            )
+        return data

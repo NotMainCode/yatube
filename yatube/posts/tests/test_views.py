@@ -24,7 +24,6 @@ class TaskPagesTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username="Author")
-        cls.user_follower = User.objects.create_user(username="Follower")
         cls.group = Group.objects.create(
             title="Тестовая группа",
             slug="test-slug",
@@ -52,8 +51,8 @@ class TaskPagesTests(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
+        super().tearDownClass()
 
     def setUp(self):
         cache.clear()
@@ -80,6 +79,14 @@ class TaskPagesTests(TestCase):
             with self.subTest(reverse_name=reverse_name):
                 response = self.guest_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
+
+    def test_url_unexisting_page_uses_correct_template_guest_user(self):
+        """
+        URL of unexisting page uses the appropriate template (guest user).
+        """
+
+        response = self.guest_client.get("/unexisting_page/")
+        self.assertTemplateUsed(response, "core/404.html")
 
     def test_page_name_uses_correct_template_post_author(self):
         """
@@ -231,6 +238,7 @@ class TaskPagesTests(TestCase):
     def test_new_comment_created_correctly(self):
         """The new comment is displayed on the post page."""
 
+        new_comment_count = Comment.objects.count() + 1
         new_comment = Comment.objects.create(
             text="Новый комментарий",
             post=self.post,
@@ -239,66 +247,74 @@ class TaskPagesTests(TestCase):
         response = self.guest_client.get(
             reverse("posts:post_detail", args={self.post.id})
         )
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertIn(new_comment, response.context["comments"])
+        current_expected = {
+            response.status_code: HTTPStatus.OK,
+            Comment.objects.count(): new_comment_count,
+            Comment.objects.last(): new_comment,
+        }
+        for current, expected in current_expected.items():
+            with self.subTest():
+                self.assertEqual(current, expected)
 
     def test_authorized_user_follow(self):
         """Authorized user can follow other user."""
 
-        self.authorized_client.force_login(self.user_follower)
+        user_following = User.objects.create_user(username="Following")
         new_follow_count = Follow.objects.count() + 1
         response = self.authorized_client.get(
-            reverse("posts:profile_follow", args={self.user.username})
+            reverse("posts:profile_follow", args={user_following.username}),
+            follow=True,
         )
-        subscription = Follow.objects.first()
+        subscription = Follow.objects.last()
         current_expected = {
-            response.status_code: HTTPStatus.FOUND,
+            response.status_code: HTTPStatus.OK,
             Follow.objects.count(): new_follow_count,
-            subscription.user: self.user_follower,
-            subscription.author: self.user,
+            subscription.user: self.user,
+            subscription.author: user_following,
         }
         for current, expected in current_expected.items():
             with self.subTest():
                 self.assertEqual(current, expected)
         self.assertRedirects(
-            response, reverse("posts:profile", args={self.user.username})
+            response, reverse("posts:profile", args={user_following.username})
         )
 
     def test_authorized_user_unfollow(self):
         """Authorized user can unfollow other user."""
 
-        self.authorized_client.force_login(self.user_follower)
+        user_following = User.objects.create_user(username="Following")
         Follow.objects.create(
-            user=self.user_follower,
-            author=self.user,
+            user=self.user,
+            author=user_following,
         )
         response = self.authorized_client.get(
-            reverse("posts:profile_unfollow", args={self.user.username})
+            reverse("posts:profile_unfollow", args={user_following.username}),
+            follow=True,
         )
         current_expected = {
-            response.status_code: HTTPStatus.FOUND,
+            response.status_code: HTTPStatus.OK,
             Follow.objects.filter(
-                user=self.user_follower, author=self.user
+                user=self.user, author=user_following
             ).exists(): False,
         }
         for current, expected in current_expected.items():
             with self.subTest():
                 self.assertEqual(current, expected)
         self.assertRedirects(
-            response, reverse("posts:profile", args={self.user.username})
+            response, reverse("posts:profile", args={user_following.username})
         )
 
-    def test_follower_feed(self):
-        """Correctness of the subscription page."""
+    def test_follower_feed_follower_user(self):
+        """Correctness of the subscription page of follower user."""
 
-        self.authorized_client.force_login(self.user_follower)
+        user_following = User.objects.create_user(username="Following")
         Follow.objects.create(
-            user=self.user_follower,
-            author=self.user,
+            user=self.user,
+            author=user_following,
         )
         new_post = Post.objects.create(
             text="Новый пост в ленте подписок",
-            author=self.user,
+            author=user_following,
         )
         response = self.authorized_client.get(reverse("posts:follow_index"))
         current_expected = {
@@ -310,8 +326,17 @@ class TaskPagesTests(TestCase):
                 self.assertEqual(
                     current,
                     expected,
-                    msg="The subscription feed is incorrect.",
+                    msg="The follower feed of follower user is incorrect.",
                 )
+
+    def test_follower_feed_not_follower_user(self):
+        """Correctness of the subscription page of not follower user."""
+
+        user_not_following = User.objects.create_user(username="NotFollowing")
+        new_post = Post.objects.create(
+            text="Новый пост в ленте подписок",
+            author=user_not_following,
+        )
         user_not_follower = User.objects.create_user(username="NotFollower")
         self.authorized_client.force_login(user_not_follower)
         response = self.authorized_client.get(reverse("posts:follow_index"))
@@ -319,5 +344,29 @@ class TaskPagesTests(TestCase):
         self.assertNotIn(
             new_post,
             response.context["page_obj"],
-            msg="The subscription feed is incorrect.",
+            msg="The follower feed of not follower user is incorrect.",
+        )
+
+
+class CacheTests(TestCase):
+    def test_cache_index_page(self):
+        """Checking the caching of the main page."""
+
+        user = User.objects.create_user(username="Author")
+        post = Post.objects.create(
+            text="Тестовый пост",
+            author=user,
+        )
+        response = self.client.get(reverse("posts:index"))
+        index_content = response.content
+        post.delete()
+        response = self.client.get(reverse("posts:index"))
+        index_content_cache = response.content
+        cache.clear()
+        response = self.client.get(reverse("posts:index"))
+        index_content_no_cache = response.content
+        self.assertEqual(index_content, index_content_cache)
+        self.assertNotEqual(
+            index_content,
+            index_content_no_cache,
         )

@@ -1,14 +1,16 @@
 """URLs request handlers of the 'Posts' application."""
 
-
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_page
 
 from .forms import CommentForm, PostForm
 from .models import Follow, Group, Post, User
 from .utils import paginator_func
 
 
+@cache_page(settings.CACHE_TIME, key_prefix="index_page")
 def index(request):
     """Main page."""
 
@@ -43,12 +45,11 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     post_list = author.posts.select_related("group", "author")
     page_obj = paginator_func(request, post_list)
-    if not request.user.is_authenticated:
-        following = False
-    else:
-        following = Follow.objects.filter(
-            user=request.user, author=author
-        ).exists()
+    following = (
+        Follow.objects.filter(user=request.user, author=author).exists()
+        if request.user.is_authenticated
+        else False
+    )
     context = {
         "author": author,
         "page_obj": page_obj,
@@ -64,7 +65,7 @@ def post_detail(request, post_id):
     post = get_object_or_404(
         Post.objects.select_related("group", "author"), id=post_id
     )
-    form = CommentForm(request.POST or None)
+    form = CommentForm()
     comments = post.comments.select_related("author")
     context = {
         "post": post,
@@ -89,7 +90,7 @@ def post_create(request):
         return render(request, template, context)
     post = form.save(commit=False)
     post.author = request.user
-    post.save()
+    form.save()
     return redirect(template_redirect, username=request.user.username)
 
 
@@ -126,7 +127,7 @@ def add_comment(request, post_id):
         comment = form.save(commit=False)
         comment.author = request.user
         comment.post = get_object_or_404(Post, id=post_id)
-        comment.save()
+        form.save()
     return redirect("posts:post_detail", post_id=post_id)
 
 
@@ -158,7 +159,5 @@ def profile_unfollow(request, username):
     """Unsubscribe from the author."""
 
     unfollow_author = get_object_or_404(User, username=username)
-    follow = Follow.objects.filter(user=request.user, author=unfollow_author)
-    if follow.exists():
-        follow.delete()
+    Follow.objects.filter(user=request.user, author=unfollow_author).delete()
     return redirect("posts:profile", username=username)
