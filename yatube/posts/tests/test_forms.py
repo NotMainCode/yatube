@@ -18,8 +18,7 @@ User = get_user_model()
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostFormTests(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         cls.user_1 = User.objects.create_user(username="Author")
         cls.user_2 = User.objects.create_user(username="NotAuthor")
         cls.group_1 = Group.objects.create(
@@ -66,7 +65,7 @@ class PostFormTests(TestCase):
         new_posts_count = Post.objects.count() + 1
         form_data = {
             "text": "Текст из формы",
-            "group": PostFormTests.group_2.id,
+            "group": self.group_2.id,
             "image": uploaded,
         }
         response = self.authorized_client.post(
@@ -78,7 +77,7 @@ class PostFormTests(TestCase):
             response,
             reverse(
                 "posts:profile",
-                args={PostFormTests.user_1.username},
+                args=(self.user_1.username,),
             ),
         )
         new_post = Post.objects.first()
@@ -86,8 +85,8 @@ class PostFormTests(TestCase):
             response.status_code: HTTPStatus.OK,
             Post.objects.count(): new_posts_count,
             new_post.text: form_data["text"],
-            new_post.group: PostFormTests.group_2,
-            new_post.author: PostFormTests.user_1,
+            new_post.group: self.group_2,
+            new_post.author: self.user_1,
             new_post.image: f"posts/{uploaded.name}",
         }
         for value, expected in value_expected.items():
@@ -101,7 +100,7 @@ class PostFormTests(TestCase):
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "",
-            "group": PostFormTests.group_1.id,
+            "group": self.group_1.id,
         }
         response = self.authorized_client.post(
             reverse("posts:post_create"),
@@ -122,16 +121,16 @@ class PostFormTests(TestCase):
 
         editable_post = Post.objects.create(
             text="Пост для редактирования",
-            author=PostFormTests.user_1,
-            group=PostFormTests.group_1,
+            author=self.user_1,
+            group=self.group_1,
         )
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "Изменённый текст из формы",
-            "group": PostFormTests.group_2.id,
+            "group": self.group_2.id,
         }
         response = self.authorized_client.post(
-            reverse("posts:post_edit", args={editable_post.id}),
+            reverse("posts:post_edit", args=(editable_post.id,)),
             data=form_data,
             follow=True,
         )
@@ -140,14 +139,14 @@ class PostFormTests(TestCase):
             response.status_code: HTTPStatus.OK,
             Post.objects.count(): new_posts_count,
             editable_post.text: form_data["text"],
-            editable_post.group: PostFormTests.group_2,
+            editable_post.group: self.group_2,
         }
         for current, expected in current_expected.items():
             with self.subTest():
                 self.assertEqual(current, expected)
         self.assertRedirects(
             response,
-            reverse("posts:post_detail", args={editable_post.id}),
+            reverse("posts:post_detail", args=(editable_post.id,)),
         )
 
     def test_edit_post_reject_authorized_user(self):
@@ -156,19 +155,19 @@ class PostFormTests(TestCase):
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "",
-            "group": PostFormTests.group_2.id,
+            "group": self.group_2.id,
         }
         response = self.authorized_client.post(
-            reverse("posts:post_edit", args={PostFormTests.post.id}),
+            reverse("posts:post_edit", args=(self.post.id,)),
             data=form_data,
             follow=True,
         )
-        editable_post = Post.objects.get(id=PostFormTests.post.id)
+        editable_post = Post.objects.get(id=self.post.id)
         current_expected = {
             response.status_code: HTTPStatus.OK,
             Post.objects.count(): new_posts_count,
-            editable_post.text: PostFormTests.post.text,
-            editable_post.group: PostFormTests.post.group,
+            editable_post.text: self.post.text,
+            editable_post.group: self.post.group,
         }
         for current, expected in current_expected.items():
             self.assertEqual(current, expected)
@@ -177,29 +176,29 @@ class PostFormTests(TestCase):
     def test_edit_post_reject_not_post_author(self):
         """The not post author cannot edit the post."""
 
-        self.authorized_client.force_login(PostFormTests.user_2)
+        self.authorized_client.force_login(self.user_2)
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "Текст не автора поста",
             "group": PostFormTests.group_2.id,
         }
         response = self.authorized_client.post(
-            reverse("posts:post_edit", args={PostFormTests.post.id}),
+            reverse("posts:post_edit", args=(self.post.id,)),
             data=form_data,
             follow=True,
         )
-        editable_post = Post.objects.get(id=PostFormTests.post.id)
+        editable_post = Post.objects.get(id=self.post.id)
         current_expected = {
             response.status_code: HTTPStatus.OK,
             Post.objects.count(): new_posts_count,
-            editable_post.text: PostFormTests.post.text,
-            editable_post.group: PostFormTests.post.group,
+            editable_post.text: self.post.text,
+            editable_post.group: self.post.group,
         }
         for current, expected in current_expected.items():
             self.assertEqual(current, expected)
         self.assertRedirects(
             response,
-            reverse("posts:post_detail", args={PostFormTests.post.id}),
+            reverse("posts:post_detail", args=(self.post.id,)),
         )
 
     def test_create_post_reject_guest_user(self):
@@ -210,7 +209,7 @@ class PostFormTests(TestCase):
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "Текст пользователя-гостя",
-            "group": PostFormTests.group_1.id,
+            "group": self.group_1.id,
         }
         login_url = reverse("users:login")
         post_create_url = reverse("posts:post_create")
@@ -235,7 +234,7 @@ class PostFormTests(TestCase):
         new_comments_count = self.post.comments.count() + 1
         form_data = {"text": "Комментарий авторизованного пользователя"}
         response = self.authorized_client.post(
-            reverse("posts:add_comment", args={PostFormTests.post.id}),
+            reverse("posts:add_comment", args=(self.post.id,)),
             data=form_data,
             follow=True,
         )
@@ -250,7 +249,7 @@ class PostFormTests(TestCase):
                 self.assertEqual(current, expected)
         self.assertRedirects(
             response,
-            reverse("posts:post_detail", args={PostFormTests.post.id}),
+            reverse("posts:post_detail", args=(self.post.id,)),
         )
 
     def test_add_comment_reject_guest_user(self):
@@ -261,9 +260,7 @@ class PostFormTests(TestCase):
         new_comments_count = self.post.comments.count()
         form_data = {"text": "Комментарий гостя"}
         login_url = reverse("users:login")
-        add_comment_url = reverse(
-            "posts:add_comment", args={PostFormTests.post.id}
-        )
+        add_comment_url = reverse("posts:add_comment", args=(self.post.id,))
         target_url = f"{login_url}?next={add_comment_url}"
         response = self.client.post(
             add_comment_url,

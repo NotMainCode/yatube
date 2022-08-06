@@ -14,20 +14,18 @@ from .utils import paginator_func
 def index(request):
     """Main page."""
 
-    template = "posts/index.html"
     post_list = Post.objects.select_related("group", "author")
     page_obj = paginator_func(request, post_list)
     context = {
         "page_obj": page_obj,
         "index": True,
     }
-    return render(request, template, context)
+    return render(request, "posts/index.html", context)
 
 
 def group_posts(request, slug):
     """Page of user posts filtered by groups."""
 
-    template = "posts/group_list.html"
     group = get_object_or_404(Group, slug=slug)
     post_list = group.posts.select_related("group", "author")
     page_obj = paginator_func(request, post_list)
@@ -35,33 +33,30 @@ def group_posts(request, slug):
         "group": group,
         "page_obj": page_obj,
     }
-    return render(request, template, context)
+    return render(request, "posts/group_list.html", context)
 
 
 def profile(request, username):
     """Page of user profile."""
 
-    template = "posts/profile.html"
     author = get_object_or_404(User, username=username)
     post_list = author.posts.select_related("group", "author")
     page_obj = paginator_func(request, post_list)
     following = (
-        Follow.objects.filter(user=request.user, author=author).exists()
-        if request.user.is_authenticated
-        else False
+        request.user.is_authenticated
+        and Follow.objects.filter(user=request.user, author=author).exists()
     )
     context = {
         "author": author,
         "page_obj": page_obj,
         "following": following,
     }
-    return render(request, template, context)
+    return render(request, "posts/profile.html", context)
 
 
 def post_detail(request, post_id):
     """Page of single post."""
 
-    template = "posts/post_detail.html"
     post = get_object_or_404(
         Post.objects.select_related("group", "author"), id=post_id
     )
@@ -72,26 +67,24 @@ def post_detail(request, post_id):
         "form": form,
         "comments": comments,
     }
-    return render(request, template, context)
+    return render(request, "posts/post_detail.html", context)
 
 
 @login_required
 def post_create(request):
     """Page for adding a new post."""
 
-    template = "posts/create_post.html"
-    template_redirect = "posts:profile"
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
     )
     context = {"form": form}
     if not form.is_valid():
-        return render(request, template, context)
+        return render(request, "posts/create_post.html", context)
     post = form.save(commit=False)
     post.author = request.user
     form.save()
-    return redirect(template_redirect, username=request.user.username)
+    return redirect("posts:profile", username=request.user.username)
 
 
 @login_required
@@ -106,16 +99,14 @@ def post_edit(request, post_id):
         files=request.FILES or None,
         instance=post,
     )
-    template = "posts/create_post.html"
-    template_redirect = "posts:post_detail"
     context = {
         "form": form,
         "is_edit": True,
     }
     if form.is_valid():
         form.save()
-        return redirect(template_redirect, post_id=post_id)
-    return render(request, template, context)
+        return redirect("posts:post_detail", post_id=post_id)
+    return render(request, "posts/create_post.html", context)
 
 
 @login_required

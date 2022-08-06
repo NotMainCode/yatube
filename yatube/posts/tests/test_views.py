@@ -21,8 +21,7 @@ User = get_user_model()
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class TaskPagesTests(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    def setUpTestData(cls):
         cls.user = User.objects.create_user(username="Author")
         cls.group = Group.objects.create(
             title="Тестовая группа",
@@ -56,7 +55,6 @@ class TaskPagesTests(TestCase):
 
     def setUp(self):
         cache.clear()
-        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(TaskPagesTests.user)
 
@@ -66,18 +64,18 @@ class TaskPagesTests(TestCase):
         page_name_template = {
             reverse("posts:index"): "posts/index.html",
             reverse(
-                "posts:group_list", args={self.group.slug}
+                "posts:group_list", args=(self.group.slug,)
             ): "posts/group_list.html",
             reverse(
-                "posts:post_detail", args={self.post.id}
+                "posts:post_detail", args=(self.post.id,)
             ): "posts/post_detail.html",
             reverse(
-                "posts:profile", args={self.user.username}
+                "posts:profile", args=(self.user.username,)
             ): "posts/profile.html",
         }
         for reverse_name, template in page_name_template.items():
             with self.subTest(reverse_name=reverse_name):
-                response = self.guest_client.get(reverse_name)
+                response = self.client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
     def test_url_unexisting_page_uses_correct_template_guest_user(self):
@@ -85,7 +83,7 @@ class TaskPagesTests(TestCase):
         URL of unexisting page uses the appropriate template (guest user).
         """
 
-        response = self.guest_client.get("/unexisting_page/")
+        response = self.client.get("/unexisting_page/")
         self.assertTemplateUsed(response, "core/404.html")
 
     def test_page_name_uses_correct_template_post_author(self):
@@ -95,7 +93,7 @@ class TaskPagesTests(TestCase):
 
         private_page_name_templates = {
             reverse(
-                "posts:post_edit", args={self.post.id}
+                "posts:post_edit", args=(self.post.id,)
             ): "posts/create_post.html",
             reverse("posts:post_create"): "posts/create_post.html",
         }
@@ -107,7 +105,7 @@ class TaskPagesTests(TestCase):
     def test_index_page_show_correct_context(self):
         """The index template is formed with the correct context."""
 
-        response = self.guest_client.get(reverse("posts:index"))
+        response = self.client.get(reverse("posts:index"))
         self.assertIn(
             "page_obj",
             response.context,
@@ -118,8 +116,8 @@ class TaskPagesTests(TestCase):
     def test_group_list_page_show_correct_context(self):
         """The group_list template is formed with the correct context."""
 
-        response = self.guest_client.get(
-            reverse("posts:group_list", args={self.group.slug})
+        response = self.client.get(
+            reverse("posts:group_list", args=(self.group.slug,))
         )
         context_key = ["group", "page_obj"]
         for key in context_key:
@@ -137,7 +135,7 @@ class TaskPagesTests(TestCase):
         """The profile template is formed with the correct context."""
 
         response = self.authorized_client.get(
-            reverse("posts:profile", args={self.user.username})
+            reverse("posts:profile", args=(self.user.username,))
         )
         context_key = ["author", "page_obj"]
         for key in context_key:
@@ -154,8 +152,8 @@ class TaskPagesTests(TestCase):
     def test_post_detail_show_correct_context(self):
         """The post_detail template is formed with the correct context."""
 
-        response = self.guest_client.get(
-            reverse("posts:post_detail", args={self.post.id}),
+        response = self.client.get(
+            reverse("posts:post_detail", args=(self.post.id,)),
         )
         self.assertIn(
             "post",
@@ -171,7 +169,7 @@ class TaskPagesTests(TestCase):
 
         address = [
             reverse("posts:post_create"),
-            reverse("posts:post_edit", args={self.post.id}),
+            reverse("posts:post_edit", args=(self.post.id,)),
         ]
         for address in address:
             with self.subTest():
@@ -193,12 +191,12 @@ class TaskPagesTests(TestCase):
         )
         address_list = [
             reverse("posts:index"),
-            reverse("posts:profile", args={self.user.username}),
-            reverse("posts:group_list", args={self.group.slug}),
+            reverse("posts:profile", args=(self.user.username,)),
+            reverse("posts:group_list", args=(self.group.slug,)),
         ]
         for address in address_list:
             with self.subTest(address=address):
-                response = self.guest_client.get(address)
+                response = self.client.get(address)
                 self.assertIn(new_post, response.context["page_obj"])
 
     def test_paginator(self):
@@ -218,8 +216,8 @@ class TaskPagesTests(TestCase):
         Post.objects.bulk_create(post_list)
         addresses = [
             reverse("posts:index"),
-            reverse("posts:group_list", args={self.group.slug}),
-            reverse("posts:profile", args={self.user.username}),
+            reverse("posts:group_list", args=(self.group.slug,)),
+            reverse("posts:profile", args=(self.user.username,)),
         ]
         page_post_count = {
             1: settings.NUM_POSTS,
@@ -244,13 +242,18 @@ class TaskPagesTests(TestCase):
             post=self.post,
             author=self.user,
         )
-        response = self.guest_client.get(
-            reverse("posts:post_detail", args={self.post.id})
+        response = self.client.get(
+            reverse("posts:post_detail", args=(self.post.id,))
+        )
+        self.assertIn(
+            "comments",
+            response.context,
+            msg="The 'comments' key is missing from the context dictionary.",
         )
         current_expected = {
             response.status_code: HTTPStatus.OK,
             Comment.objects.count(): new_comment_count,
-            Comment.objects.last(): new_comment,
+            response.context["comments"][0]: new_comment,
         }
         for current, expected in current_expected.items():
             with self.subTest():
@@ -262,7 +265,7 @@ class TaskPagesTests(TestCase):
         user_following = User.objects.create_user(username="Following")
         new_follow_count = Follow.objects.count() + 1
         response = self.authorized_client.get(
-            reverse("posts:profile_follow", args={user_following.username}),
+            reverse("posts:profile_follow", args=(user_following.username,)),
             follow=True,
         )
         subscription = Follow.objects.last()
@@ -276,7 +279,7 @@ class TaskPagesTests(TestCase):
             with self.subTest():
                 self.assertEqual(current, expected)
         self.assertRedirects(
-            response, reverse("posts:profile", args={user_following.username})
+            response, reverse("posts:profile", args=(user_following.username,))
         )
 
     def test_authorized_user_unfollow(self):
@@ -288,7 +291,7 @@ class TaskPagesTests(TestCase):
             author=user_following,
         )
         response = self.authorized_client.get(
-            reverse("posts:profile_unfollow", args={user_following.username}),
+            reverse("posts:profile_unfollow", args=(user_following.username,)),
             follow=True,
         )
         current_expected = {
@@ -301,7 +304,7 @@ class TaskPagesTests(TestCase):
             with self.subTest():
                 self.assertEqual(current, expected)
         self.assertRedirects(
-            response, reverse("posts:profile", args={user_following.username})
+            response, reverse("posts:profile", args=(user_following.username,))
         )
 
     def test_follower_feed_follower_user(self):
