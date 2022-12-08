@@ -1,3 +1,41 @@
 # hw05_final
 
-[![CI](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml)
+## Technology
+
+Python 3.7
+
+Django 2.2.16
+
+Django REST framework 3.2.14
+
+## For launch
+
+Create and activate virtual environment
+```
+py -3.7 -m venv venv
+
+source venv/Scripts/activate
+```
+
+Install dependencies from requirements.txt file
+```
+pip install -r requirements.txt
+```
+
+Perform migrations
+```
+py manage.py migrate
+```
+
+Run project
+```
+py manage.py runserver 8008
+```
+
+## Author
+
+https://github.com/NotMainCode
+
+
+###
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

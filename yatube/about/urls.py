@@ -1,4 +1,4 @@
-"""about URL Configuration"""
+"""about URL Configuration."""
 
 from django.urls import path
 
