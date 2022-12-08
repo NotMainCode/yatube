@@ -16,6 +16,7 @@ urlpatterns = [
     path("auth/", include("django.contrib.auth.urls")),
     path("", include("posts.urls", namespace="posts")),
 ]
+
 if settings.DEBUG:
     import debug_toolbar
 
