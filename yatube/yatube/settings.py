@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "about.apps.AboutConfig",
     "core.apps.CoreConfig",
     "sorl.thumbnail",
-    "debug_toolbar",
 ]
 
 MIDDLEWARE = [
@@ -58,7 +57,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 INTERNAL_IPS = [
@@ -168,3 +166,10 @@ CACHES = {
     }
 }
 CACHE_TIME = 20
+
+# Debug mode settings
+if DEBUG:
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.append(
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+    )
