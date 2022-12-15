@@ -1,12 +1,19 @@
-# hw05_final
+# Yatube
+
+A social network of bloggers, where users can publish posts with pictures.
+
+After creating an account users can:
+- publish posts
+- subscribe to favorite authors
+- publish comments to posts.
+
+Anonymous users can only view posts and comments to them.
 
 ## Technology
 
 Python 3.7
 
 Django 2.2.16
-
-Django REST framework 3.2.14
 
 ## For launch
 
