@@ -1,12 +1,13 @@
-"""Admin zone settings of the 'Posts' application."""
+"""Admin site settings of the 'Posts' application."""
 
 from django.contrib import admin
 
 from .models import Comment, Follow, Group, Post
 
 
+@admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    """Table settings for posts of users in the admin-zone."""
+    """Table settings for resource 'Post' on the admin site."""
 
     list_display = (
         "pk",
@@ -21,8 +22,9 @@ class PostAdmin(admin.ModelAdmin):
     empty_value_display = "-пусто-"
 
 
+@admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
-    """Table settings for user subscriptions in the admin area."""
+    """Table settings for resource 'Follow' on the admin site."""
 
     list_display = (
         "pk",
@@ -33,7 +35,27 @@ class FollowAdmin(admin.ModelAdmin):
     list_filter = ("user", "author")
 
 
-admin.site.register(Post, PostAdmin)
-admin.site.register(Group)
-admin.site.register(Follow, FollowAdmin)
-admin.site.register(Comment)
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    """Table settings for resource 'Group' on the admin site."""
+
+    list_display = (
+        "pk",
+        "title",
+        "slug",
+        "description",
+    )
+    prepopulated_fields = {"slug": ("title",)}
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    """Table settings for resource 'Comment' on the admin site."""
+
+    list_display = (
+        "pk",
+        "text",
+        "author",
+        "post",
+    )
+    list_editable = ("author",)

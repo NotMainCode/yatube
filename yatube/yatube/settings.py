@@ -142,7 +142,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Constants
 
-NUM_POSTS = 10
+NUM_POSTS = 5
 NUM_CHAR = 15
 
 LOGIN_URL = "users:login"

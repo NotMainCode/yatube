@@ -34,6 +34,11 @@ Perform migrations
 py manage.py migrate
 ```
 
+Create superuser
+```
+python manage.py createsuperuser
+```
+
 Run project
 ```
 py manage.py runserver 8008
@@ -41,8 +46,4 @@ py manage.py runserver 8008
 
 ## Author
 
-https://github.com/NotMainCode
-
-
-###
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[NotMainCode](https://github.com/NotMainCode)
