@@ -81,8 +81,7 @@ def post_create(request):
     context = {"form": form}
     if not form.is_valid():
         return render(request, "posts/create_post.html", context)
-    post = form.save(commit=False)
-    post.author = request.user
+    form.instance.author = request.user
     form.save()
     return redirect("posts:profile", username=request.user.username)
 
@@ -115,9 +114,8 @@ def add_comment(request, post_id):
 
     form = CommentForm(request.POST or None)
     if form.is_valid():
-        comment = form.save(commit=False)
-        comment.author = request.user
-        comment.post = get_object_or_404(Post, id=post_id)
+        form.instance.author = request.user
+        form.instance.post = get_object_or_404(Post, id=post_id)
         form.save()
     return redirect("posts:post_detail", post_id=post_id)
 
