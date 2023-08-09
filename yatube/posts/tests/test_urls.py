@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from ..models import Group, Post
+from posts.models import Group, Post
 
 User = get_user_model()
 
@@ -29,10 +29,7 @@ class PostURLTests(TestCase):
         self.authorized_client.force_login(PostURLTests.user)
 
     def test_public_addresses_accessible_unauthorized_user(self):
-        """
-        Public addresses are available  to unauthorized users.
-        """
-
+        """Public addresses are available to unauthorized users."""
         public_address = [
             reverse("posts:index"),
             reverse("posts:group_list", args=(self.group.slug,)),
@@ -45,10 +42,7 @@ class PostURLTests(TestCase):
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_private_addresses_available_author(self):
-        """
-        Private addresses are available to the author.
-        """
-
+        """Private addresses are available to the author."""
         private_address = [
             reverse("posts:post_edit", args=(self.post.id,)),
             reverse("posts:post_create"),
@@ -60,7 +54,6 @@ class PostURLTests(TestCase):
 
     def test_url_redirect_anonymous(self):
         """Redirects for an unauthorized user."""
-
         login_url = reverse("users:login")
         url_with_redirect = [
             reverse("posts:post_edit", args=(self.post.id,)),
@@ -74,7 +67,6 @@ class PostURLTests(TestCase):
 
     def test_editing_post_only_for_post_author(self):
         """The post editing page is unavailable to the not post author."""
-
         not_author = User.objects.create_user(username="NotAuthor")
         self.authorized_client.force_login(not_author)
         response = self.authorized_client.get(
@@ -86,6 +78,5 @@ class PostURLTests(TestCase):
 
     def test_error_404_for_unknown_page(self):
         """Error 404 when navigating to unexisting page."""
-
         response = self.client.get("/unexisting_page/")
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)

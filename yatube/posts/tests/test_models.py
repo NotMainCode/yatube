@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from ..models import Group, Post
+from posts.models import Group, Post
 
 User = get_user_model()
 
@@ -24,9 +24,8 @@ class PostModelTest(TestCase):
 
     def test_models_have_correct_object_names(self):
         """Models __str__ work correctly."""
-
         value_expected = {
-            str(self.group.title): self.group.title,
+            str(self.group): self.group.title,
             str(self.post): self.post.text[: settings.NUM_CHAR],
         }
         for value, expected in value_expected.items():

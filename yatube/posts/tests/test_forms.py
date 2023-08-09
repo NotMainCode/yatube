@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Group, Post
+from posts.models import Group, Post
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -48,7 +48,6 @@ class PostFormTests(TestCase):
 
     def test_create_post_authorized_user(self):
         """A valid form creates a new post (authorized user)."""
-
         small_gif = (
             b"\x47\x49\x46\x38\x39\x61\x02\x00"
             b"\x01\x00\x80\x00\x00\x00\x00\x00"
@@ -96,7 +95,6 @@ class PostFormTests(TestCase):
 
     def test_create_post_reject_authorized_user(self):
         """Invalid form do not creates a post entry (authorized user)."""
-
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "",
@@ -118,7 +116,6 @@ class PostFormTests(TestCase):
 
     def test_edit_post_authorized_user(self):
         """Valid editing form changes the post (authorized user)."""
-
         editable_post = Post.objects.create(
             text="Пост для редактирования",
             author=self.user_1,
@@ -151,7 +148,6 @@ class PostFormTests(TestCase):
 
     def test_edit_post_reject_authorized_user(self):
         """Invalid editing form do not change the post (authorized user)."""
-
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "",
@@ -175,7 +171,6 @@ class PostFormTests(TestCase):
 
     def test_edit_post_reject_not_post_author(self):
         """The not post author cannot edit the post."""
-
         self.authorized_client.force_login(self.user_2)
         new_posts_count = Post.objects.count()
         form_data = {
@@ -205,7 +200,6 @@ class PostFormTests(TestCase):
         """
         The guest user cannot create a post, and is redirected to login page.
         """
-
         new_posts_count = Post.objects.count()
         form_data = {
             "text": "Текст пользователя-гостя",
@@ -230,7 +224,6 @@ class PostFormTests(TestCase):
 
     def test_add_comment_available_authorized_user(self):
         """Authorized user can comment on posts."""
-
         new_comments_count = self.post.comments.count() + 1
         form_data = {"text": "Комментарий авторизованного пользователя"}
         response = self.authorized_client.post(
@@ -256,7 +249,6 @@ class PostFormTests(TestCase):
         """
         Guest user cannot comment on posts, and is redirected to login page.
         """
-
         new_comments_count = self.post.comments.count()
         form_data = {"text": "Комментарий гостя"}
         login_url = reverse("users:login")

@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = "cit@fu1&w^p(wo+__kkr6qdt^o9%1y)y@@p6c*ewtl_(@9pjm9"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -170,6 +170,4 @@ CACHE_TIME = 20
 # Debug mode settings
 if DEBUG:
     INSTALLED_APPS.append("debug_toolbar")
-    MIDDLEWARE.append(
-        "debug_toolbar.middleware.DebugToolbarMiddleware",
-    )
+    MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")

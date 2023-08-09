@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from contextlib import suppress
 from http import HTTPStatus
 from random import randint
 
@@ -10,8 +11,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings, TestCase
 from django.urls import reverse
 
-from ..forms import PostForm
-from ..models import Comment, Follow, Group, Post
+from posts.forms import PostForm
+from posts.models import Comment, Follow, Group, Post
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -60,7 +61,6 @@ class TaskPagesTests(TestCase):
 
     def test_page_name_uses_correct_template_guest_user(self):
         """Name of public page uses the appropriate template."""
-
         page_name_template = {
             reverse("posts:index"): "posts/index.html",
             reverse(
@@ -82,15 +82,11 @@ class TaskPagesTests(TestCase):
         """
         URL of unexisting page uses the appropriate template (guest user).
         """
-
         response = self.client.get("/unexisting_page/")
         self.assertTemplateUsed(response, "core/404.html")
 
     def test_page_name_uses_correct_template_post_author(self):
-        """
-        Name of private page uses the appropriate template.
-        """
-
+        """Name of private page uses the appropriate template."""
         private_page_name_templates = {
             reverse(
                 "posts:post_edit", args=(self.post.id,)
@@ -104,7 +100,6 @@ class TaskPagesTests(TestCase):
 
     def test_index_page_show_correct_context(self):
         """The index template is formed with the correct context."""
-
         response = self.client.get(reverse("posts:index"))
         self.assertIn(
             "page_obj",
@@ -115,7 +110,6 @@ class TaskPagesTests(TestCase):
 
     def test_group_list_page_show_correct_context(self):
         """The group_list template is formed with the correct context."""
-
         response = self.client.get(
             reverse("posts:group_list", args=(self.group.slug,))
         )
@@ -133,7 +127,6 @@ class TaskPagesTests(TestCase):
 
     def test_profile_page_show_correct_context(self):
         """The profile template is formed with the correct context."""
-
         response = self.authorized_client.get(
             reverse("posts:profile", args=(self.user.username,))
         )
@@ -151,7 +144,6 @@ class TaskPagesTests(TestCase):
 
     def test_post_detail_show_correct_context(self):
         """The post_detail template is formed with the correct context."""
-
         response = self.client.get(
             reverse("posts:post_detail", args=(self.post.id,)),
         )
@@ -166,42 +158,37 @@ class TaskPagesTests(TestCase):
         """
         The post_create/edit template is formed with the correct context.
         """
-
-        address = [
+        addresses = [
             reverse("posts:post_create"),
             reverse("posts:post_edit", args=(self.post.id,)),
         ]
-        for address in address:
+        for address in addresses:
             with self.subTest():
                 response = self.authorized_client.get(address)
                 self.assertIn("form", response.context)
                 self.assertEqual(type(response.context["form"]), PostForm)
-                try:
+                with suppress(KeyError):
                     self.assertEqual(response.context["is_edit"], True)
-                except KeyError:
-                    pass
 
     def test_new_post_created_correctly(self):
         """The new post is displayed correctly on the pages."""
-
         new_post = Post.objects.create(
             text="Новый пост",
             author=self.user,
             group=self.group,
         )
-        address_list = [
+        addresses = [
             reverse("posts:index"),
             reverse("posts:profile", args=(self.user.username,)),
             reverse("posts:group_list", args=(self.group.slug,)),
         ]
-        for address in address_list:
+        for address in addresses:
             with self.subTest(address=address):
                 response = self.client.get(address)
                 self.assertIn(new_post, response.context["page_obj"])
 
     def test_paginator(self):
         """The paginator test."""
-
         add_num_post = randint(0, settings.NUM_POSTS)
         num_post = settings.NUM_POSTS + add_num_post
         post_list = []
@@ -235,7 +222,6 @@ class TaskPagesTests(TestCase):
 
     def test_new_comment_created_correctly(self):
         """The new comment is displayed on the post page."""
-
         new_comment_count = Comment.objects.count() + 1
         new_comment = Comment.objects.create(
             text="Новый комментарий",
@@ -248,7 +234,7 @@ class TaskPagesTests(TestCase):
         self.assertIn(
             "comments",
             response.context,
-            msg="The 'comments' key is missing from the context dictionary.",
+            msg="The key 'comments' is not in the context dictionary.",
         )
         current_expected = {
             response.status_code: HTTPStatus.OK,
@@ -261,7 +247,6 @@ class TaskPagesTests(TestCase):
 
     def test_authorized_user_follow(self):
         """Authorized user can follow other user."""
-
         user_following = User.objects.create_user(username="Following")
         new_follow_count = Follow.objects.count() + 1
         response = self.authorized_client.get(
@@ -284,7 +269,6 @@ class TaskPagesTests(TestCase):
 
     def test_authorized_user_unfollow(self):
         """Authorized user can unfollow other user."""
-
         user_following = User.objects.create_user(username="Following")
         Follow.objects.create(
             user=self.user,
@@ -309,7 +293,6 @@ class TaskPagesTests(TestCase):
 
     def test_follower_feed_follower_user(self):
         """Correctness of the subscription page of follower user."""
-
         user_following = User.objects.create_user(username="Following")
         Follow.objects.create(
             user=self.user,
@@ -334,7 +317,6 @@ class TaskPagesTests(TestCase):
 
     def test_follower_feed_not_follower_user(self):
         """Correctness of the subscription page of not follower user."""
-
         user_not_following = User.objects.create_user(username="NotFollowing")
         new_post = Post.objects.create(
             text="Новый пост в ленте подписок",
@@ -354,7 +336,6 @@ class TaskPagesTests(TestCase):
 class CacheTests(TestCase):
     def test_cache_index_page(self):
         """Checking the caching of the main page."""
-
         user = User.objects.create_user(username="Author")
         post = Post.objects.create(
             text="Тестовый пост",
